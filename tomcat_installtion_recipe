@@ -1,0 +1,62 @@
+Chef::Log.warn('The default tomcat recipe does nothing. See the readme for information on using the tomcat resources')
+
+username = 'tomcat_user'
+user_group= 'tomcat_group'
+tomcat_installtion_path= '/home/azure_user/installation/tomcat-8.5.5'
+
+ser "#{username}" do
+  manage_home true
+  comment 'User to manage tomcat'
+  home '/home/azure_user/installation'
+  shell '/bin/bash'
+  password '$1$.7ky1xw4$.l17QF5L58/YJOAHc/Dkr.'
+end
+
+
+group "#{user_group}" do
+  members 'azure_user'
+  action :create
+end
+
+tomcat_install 'install_tomcat_8.5.5' do
+   version '8.5.5'
+   install_path "#{tomcat_installtion_path}"
+   tarball_uri 'http://archive.apache.org/dist/tomcat/tomcat-8/v8.5.5/bin/apache-tomcat-8.5.5.tar.gz'
+   tomcat_user "#{username}"
+   tomcat_group "#{user_group}"
+end
+
+
+## our own server.xml for custom port
+cookbook_file "#{tomcat_installtion_path}/conf/server.xml" do
+   source 'server.xml'
+   tomcat_user "#{username}"
+   tomcat_group "#{user_group}"
+   mode '0777'
+end
+
+
+cookbook_file "#{tomcat_installtion_path}/webapps/Webservice.war" do
+    source 'Webservice.war'
+    tomcat_user "#{username}"
+    tomcat_group "#{user_group}"
+    mode '0777'
+ #notifies :restart, 'tomcat_service[install_tomcat_8.5.5]'
+end
+
+
+cookbook_file "#{tomcat_installtion_path}/webapps/NotificationDemo.war" do
+    source 'NotificationDemo.war'
+    tomcat_user "#{username}"
+    tomcat_group "#{user_group}"
+    mode '0777'
+   #notifies :restart, 'tomcat_service[install_tomcat_8.5.5]'
+end
+
+tomcat_service 'install_tomcat_8.5.5' do
+      action [:start, :enable]
+      env_vars [{ 'CONFIG_PATH' => '/app/azure_user/properties/'}]
+      sensitive true
+      tomcat_user "#{username}"
+      tomcat_group "#{user_group}"
+end
